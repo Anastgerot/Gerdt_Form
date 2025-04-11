@@ -25,7 +25,10 @@ namespace Gerdt_Form
         public Form1()
         {
             InitializeComponent();
+            AllocConsole(); 
         }
+        [DllImport("kernel32.dll")]
+        static extern bool AllocConsole();
 
         [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram2\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
         public static extern bool initconnect();

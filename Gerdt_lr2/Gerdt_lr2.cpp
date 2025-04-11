@@ -20,6 +20,24 @@ struct header {
     int size;
 };
 
+void launchClient(wstring path)
+{
+    wstring pathCopy = path;
+
+    STARTUPINFO si = { sizeof(si) };
+    PROCESS_INFORMATION pi;
+    if (CreateProcess(NULL, &pathCopy[0],NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi))
+    {
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
+    }
+    else
+    {
+        wcerr << L"Не удалось запустить клиент: " << path << endl;
+    }
+}
+
+
 void MyThread(Session* ses) {
     {
         lock_guard<mutex> lock(mtx);
@@ -114,8 +132,10 @@ int main() {
         boost::asio::io_context io;
         tcp::acceptor a(io, tcp::endpoint(tcp::v4(), port));
 
-
         wcout << L"Сервер запущен..." << endl;
+
+        launchClient(L"C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram2/Debug/Gerdt_Form.exe");
+
 
         while (true) {
 

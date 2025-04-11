@@ -41,30 +41,41 @@ extern "C" {
 
     _declspec(dllexport) bool sendMessage(int type, const wchar_t* data) {
         try {
-            if (!g_socket || !g_socket->is_open()) return false;
+            lock_guard<mutex> lock(g_socketMutex);
+
+            if (!g_socket) {
+                wcerr << L"[sendMessage] Socket is not initialized" << endl;
+                return false;
+            }
+
+            if (!g_socket->is_open()) {
+                wcerr << L"[sendMessage] Socket is closed" << endl;
+                return false;
+            }
+
 
             if (!data) {
-                wcerr << L"Ошибка: data == nullptr" << endl;
+                wcerr << L"[sendMessage] Error: data == nullptr" << endl;
                 return false;
             }
 
             wstring messageData(data);
+            wcerr << L"[sendMessage] Received message: " << messageData << endl;
+
             MessageHeader header{ type, static_cast<int>(messageData.length() * sizeof(wchar_t)) };
 
-            if (header.size == 0) {
-                wcerr << L"Ошибка: пустое сообщение" << endl;
-                return false;
-            }
+            wcout << L"[sendMessage] Sending data: " << messageData << L", bytes: " << header.size << endl;
 
-            // Логирование данных
-            wcout << L"Отправка данных: " << messageData << endl;
             sendData(*g_socket, &header);
             sendData(*g_socket, messageData.c_str(), header.size);
 
             return true;
         }
         catch (const std::exception& e) {
-            wcerr << L"Ошибка в sendMessage: " << e.what() << endl;
+            std::string msg = e.what();
+            std::cerr << "[sendMessage] Exception : " << msg << std::endl;
+
+
             return false;
         }
     }
