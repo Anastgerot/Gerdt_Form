@@ -25,7 +25,7 @@ extern "C" {
     _declspec(dllexport) bool initconnect() {
         try {
 
-            if (!g_socket || !g_socket->is_open()) {
+            if (!g_socket) {
                 tcp::resolver resolver(io);
                 tcp::resolver::results_type endpoints = resolver.resolve("127.0.0.1", "12345");
                 g_socket = make_unique<tcp::socket>(io);
@@ -56,6 +56,8 @@ extern "C" {
                 return false;
             }
 
+            // Логирование данных
+            wcout << L"Отправка данных: " << messageData << endl;
             sendData(*g_socket, &header);
             sendData(*g_socket, messageData.c_str(), header.size);
 

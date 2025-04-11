@@ -5,12 +5,14 @@
 #include <map>
 #include <memory>
 #include <mutex>
+#include <atomic>
 
 using namespace std;
 using boost::asio::ip::tcp;
 
 vector<Session*> sessions;
-mutex mtx; 
+mutex mtx;
+atomic<int> threadCounter(1); 
 
 struct header {
     int id;
@@ -18,11 +20,10 @@ struct header {
     int size;
 };
 
-
 void MyThread(Session* ses) {
     {
-    lock_guard<mutex> lock(mtx);
-    wcout << L"Поток " << ses->sessionID << L" работает" << endl;
+        lock_guard<mutex> lock(mtx);
+        wcout << L"Поток " << ses->sessionID << L" работает" << endl;
     }
     while (true) {
 
@@ -72,8 +73,9 @@ void processClient(tcp::socket s) {
 
             try {
                 int count = stoi(m.data);
-                for (int i = 1; i <= count; i++) {
-                    Session* cSession = new Session(i);
+                for (int i = 0; i < count; i++) {
+                    int newSessionID = threadCounter.fetch_add(1); 
+                    Session* cSession = new Session(newSessionID);
                     sessions.push_back(cSession);
                     thread t(MyThread, cSession);
                     t.detach();
@@ -94,62 +96,6 @@ void processClient(tcp::socket s) {
             }
             break;
         }
-
-        //case MT_GETDATA: {
-        //    {
- /*               if (!sessions.empty()) {
-                    header h;
-                    wstring m = getMessage(h);
-
-                    if (h.id == -1) {
-                        wcout << L"Главный поток: " << m << endl;
-                        SetEvent(events[0]);
-                    }
-                    else if (h.id == 0) {
-                        wcout << L"Сообщение всем потокам: " << m << endl;
-                        for (auto& c : sessions) {
-                            Message message(MT_DATA, m);
-                            c->addMessage(message);
-                        }
-                        SetEvent(events[0]);
-                    }
-                    else {
-                        if (h.id > 0 && h.id <= sessions.size()) {
-                            Session* cSession = sessions[h.id - 1];
-                            Message message(MT_DATA, m);
-                            cSession->addMessage(message);
-                        }
-                        SetEvent(events[0]);
-                    }
-                }
-                break;*/
-        //    }
-        //    break;
-        //}
-
-        //default: {
-        //    // Обработка других типов сообщений
-        //    {
-        //        lock_guard<mutex> lock(mtx);
-        //        auto iSessionFrom = sessions.find(m.header.from);
-        //        if (iSessionFrom != sessions.end()) {
-        //            auto iSessionTo = sessions.find(m.header.to);
-        //            if (iSessionTo != sessions.end()) {
-        //                iSessionTo->second->add(m);  // Добавление сообщения в сессию получателя
-        //            }
-        //            else if (m.header.to == MR_ALL) {
-        //                // Отправка сообщения всем сессиям, кроме отправителя
-        //                for (auto it = sessions.begin(); it != sessions.end(); ++it) {
-        //                    if (it->first != m.header.from) {
-        //                        it->second->add(m);
-        //                    }
-        //                }
-        //            }
-        //            Message::send(s, m.header.from, MR_BROKER, MT_CONFIRM);  // Подтверждение получения сообщения
-        //        }
-        //    }
-        //    break;
-        //}
         }
     }
     catch (std::exception& e) {

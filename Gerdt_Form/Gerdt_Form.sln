@@ -10,9 +10,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gerdt_Form", "Gerdt_Form.cs
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Gerdt_lr2", "..\Gerdt_lr2\Gerdt_lr2.vcxproj", "{38F7369C-40E0-4064-81EE-0A2CB875F936}"
-	ProjectSection(ProjectDependencies) = postProject
-		{1F3854EF-B25C-449C-AF28-2A11B4FDAB61} = {1F3854EF-B25C-449C-AF28-2A11B4FDAB61}
-	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Gerdt_DLL", "..\Gerdt_DLL\Gerdt_DLL.vcxproj", "{1F3854EF-B25C-449C-AF28-2A11B4FDAB61}"
 EndProject

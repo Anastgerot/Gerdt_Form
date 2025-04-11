@@ -36,14 +36,11 @@ namespace Gerdt_Form
 
         private void Start_Click(object sender, EventArgs e)
         {
+            // Всегда устанавливаем новое соединение перед операцией
             if (!initconnect())
             {
                 MessageBox.Show("Не удалось подключиться к серверу");
                 return;
-            }
-            else
-            {
-                MessageBox.Show("Подключение к серверу успешно");
             }
 
             ListBox.Items.Clear();
@@ -58,7 +55,7 @@ namespace Gerdt_Form
             }
 
             string data = threadCount.ToString();
-            int type = 2; 
+            int type = 2;
 
             if (!sendMessage(type, data))
             {
@@ -84,13 +81,7 @@ namespace Gerdt_Form
 
             // Отправляем запрос на остановку последнего потока
             int lastThreadId = ListBox.Items.Count - 2; 
-            int type = 3; 
-
-            //if (!sendMessage(lastThreadId, fromId, type, ""))
-            //{
-            //    MessageBox.Show("Ошибка при остановке потока");
-            //    return;
-            //}
+            int type = 3;
 
             ListBox.Items.RemoveAt(ListBox.Items.Count - 1);
 
