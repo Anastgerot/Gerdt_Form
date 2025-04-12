@@ -82,7 +82,7 @@ void processClient(tcp::socket s) {
     try {
         Message m;
         int code = m.receive(s);
-        wcout << "TYPE " << m.header.messageType << endl;
+        //wcout << "TYPE " << m.header.messageType << endl;
 
         switch (code) {
         case MT_INIT: 
@@ -107,6 +107,38 @@ void processClient(tcp::socket s) {
             }
             break;
         }
+        case MT_GETDATA: {
+            if (!sessions.empty()) {
+                size_t sepPos = m.data.find(L'|');
+                if (sepPos != wstring::npos) {
+                    int id = stoi(m.data.substr(0, sepPos));
+                    wstring text = m.data.substr(sepPos + 1);
+
+                    if (id == -1) {
+                        wcout << L"Главный поток: " << text << endl;
+                    }
+                    else if (id == 0) {
+                        wcout << L"Сообщение всем потокам: " << text << endl;
+                        for (auto& c : sessions) {
+                            Message message(MT_DATA, text);
+                            c->addMessage(message);
+                        }
+                    }
+                    else if (id > 0 && id <= sessions.size()) {
+                        Session* cSession = sessions[id - 1];
+                        Message message(MT_DATA, text);
+                        cSession->addMessage(message);
+                    }
+                    else {
+                        wcout << L"Неверный ID потока: " << id << endl;
+                    }
+                }
+                else {
+                    wcout << L"Некорректный формат сообщения (не найден символ '|')" << endl;
+                }
+            }
+            break;
+        }
       }
     }
     catch (std::exception& e) {
@@ -128,7 +160,7 @@ int main() {
         wcout << L"Сервер запущен..." << endl;
 
         launchClient(L"C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram2/Debug/Gerdt_Form.exe");
-
+        //launchClient(L"C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram2/Debug/Gerdt_Form.exe");
 
         while (true) {
 

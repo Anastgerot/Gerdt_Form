@@ -132,17 +132,12 @@ namespace Gerdt_Form
             }
 
             string message = TextBox.Text;
-            int messageType = 1;
+            int messageType = 4; 
 
-            //bool success = sendMessage(threadId, fromId, messageType, message);
-            //if (success)
-            //{
-            //    MessageBox.Show("Сообщение отправлено");
-            //}
-            //else
-            //{
-            //    MessageBox.Show("Ошибка при отправке");
-            //}
+            string fullMessage = $"{threadId}|{message}";
+
+            sendCommand(messageType, fullMessage);
+            MessageBox.Show("Сообщение отправлено");
 
         }
     }
