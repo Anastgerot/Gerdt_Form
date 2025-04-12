@@ -5,6 +5,7 @@
 #include <string>
 #include <mutex>
 #include "asio.h"
+#include "C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram2/Gerdt_lr2/Message.h"
 
 using namespace std;
 using boost::asio::ip::tcp;
@@ -14,10 +15,6 @@ unique_ptr<tcp::socket> g_socket;
 mutex g_socketMutex;
 
 
-struct MessageHeader {
-    int type;
-    int size;
-};
 
 extern "C" {
 
@@ -39,60 +36,26 @@ extern "C" {
         }
     }
 
-    _declspec(dllexport) bool sendMessage(int type, const wchar_t* data) {
+    _declspec(dllexport) void __stdcall sendCommand(int commandId, const wchar_t* message)
+    {
         try {
-            lock_guard<mutex> lock(g_socketMutex);
+            boost::asio::io_context io;
+            tcp::socket socket(io);
+            tcp::resolver resolver(io);
+            auto endpoints = resolver.resolve("127.0.0.1", "12345");
+            boost::asio::connect(socket, endpoints);
 
-            if (!g_socket) {
-                wcerr << L"[sendMessage] Socket is not initialized" << endl;
-                return false;
-            }
+            MessageHeader header;
+            header.messageType = commandId;
+            header.size = message ? static_cast<int>(wcslen(message) * sizeof(wchar_t)) : 0;
 
-            if (!g_socket->is_open()) {
-                wcerr << L"[sendMessage] Socket is closed" << endl;
-                return false;
-            }
-
-
-            if (!data) {
-                wcerr << L"[sendMessage] Error: data == nullptr" << endl;
-                return false;
-            }
-
-            wstring messageData(data);
-            wcerr << L"[sendMessage] Received message: " << messageData << endl;
-
-            MessageHeader header{ type, static_cast<int>(messageData.length() * sizeof(wchar_t)) };
-
-            wcout << L"[sendMessage] Sending data: " << messageData << L", bytes: " << header.size << endl;
-
-            sendData(*g_socket, &header);
-            sendData(*g_socket, messageData.c_str(), header.size);
-
-            return true;
+            sendData(socket, &header, sizeof(header));
+            if (header.size > 0)
+                sendData(socket, message, header.size);
         }
         catch (const std::exception& e) {
-            std::string msg = e.what();
-            std::cerr << "[sendMessage] Exception : " << msg << std::endl;
-
-
-            return false;
+            std::wcerr << L"[DLL] Exception in sendCommand: " << e.what() << std::endl;
         }
     }
-
-    //_declspec(dllexport) bool sendMessage(int type, const wchar_t* data) {
-
-    //    if (!g_socket || !g_socket->is_open()) return false;
-
-    //    wstring messageData(data);
-    //    MessageHeader header{ type, static_cast<int>(messageData.length() * sizeof(wchar_t)) };
-
-    //    sendData(*g_socket, &header);
-    //    sendData(*g_socket, messageData.c_str(), header.size);
-
-    //    return true;
-
-    //}
-
 
 }

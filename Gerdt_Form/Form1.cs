@@ -21,34 +21,31 @@ namespace Gerdt_Form
     }
     public partial class Form1 : Form
     {
+        private int totalThreads = 0;
         private Process process;
         public Form1()
         {
             InitializeComponent();
-            AllocConsole(); 
+            //AllocConsole();
         }
-        [DllImport("kernel32.dll")]
-        static extern bool AllocConsole();
+        //[DllImport("kernel32.dll")]
+        //static extern bool AllocConsole();
 
         [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram2\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
         public static extern bool initconnect();
 
         [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram2\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
-        public static extern bool sendMessage(int type, string data);
+        public static extern void sendCommand(int commandId, string message);
 
 
         private void Start_Click(object sender, EventArgs e)
         {
-            // Всегда устанавливаем новое соединение перед операцией
-            if (!initconnect())
-            {
-                MessageBox.Show("Не удалось подключиться к серверу");
-                return;
-            }
 
-            ListBox.Items.Clear();
-            ListBox.Items.Add("Главный поток");
-            ListBox.Items.Add("Все потоки");
+            if (!ListBox.Items.Contains("Главный поток"))
+                ListBox.Items.Add("Главный поток");
+
+            if (!ListBox.Items.Contains("Все потоки"))
+                ListBox.Items.Add("Все потоки");
 
             int threadCount = (int)NumericUpDown.Value;
             if (threadCount <= 0)
@@ -60,33 +57,38 @@ namespace Gerdt_Form
             string data = threadCount.ToString();
             int type = 2;
 
-            if (!sendMessage(type, data))
-            {
-                MessageBox.Show("Ошибка при создании потоков");
-                return;
-            }
+            sendCommand(type, data);
 
             for (int i = 1; i <= threadCount; i++)
             {
-                ListBox.Items.Add($"Поток: {i}");
+                totalThreads++;
+                ListBox.Items.Add($"Поток: {totalThreads}");
             }
         }
 
         private void Stop_Click(object sender, EventArgs e)
         {
 
-            if (ListBox.Items.Count <= 2)
+            if (totalThreads == 0)
             {
-                ListBox.Items.Clear();
-                TextBox.Clear();
+                MessageBox.Show("Нет потоков для закрытия");
                 return;
             }
 
-            // Отправляем запрос на остановку последнего потока
-            int lastThreadId = ListBox.Items.Count - 2; 
-            int type = 3;
+            int messageType = 3;
+            string messageData = "";
+            sendCommand(messageType, messageData);
 
-            ListBox.Items.RemoveAt(ListBox.Items.Count - 1);
+            for (int i = ListBox.Items.Count - 1; i >= 0; i--)
+            {
+                string item = ListBox.Items[i].ToString();
+                if (item.StartsWith("Поток:"))
+                {
+                    ListBox.Items.RemoveAt(i);
+                    totalThreads--;
+                    break;
+                }
+            }
 
         }
         private void Send_Click(object sender, EventArgs e)

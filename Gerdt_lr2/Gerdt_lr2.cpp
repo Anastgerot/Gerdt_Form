@@ -78,29 +78,22 @@ void MyThread(Session* ses) {
     }
 }
 
-// Функция для обработки клиентов
 void processClient(tcp::socket s) {
     try {
         Message m;
         int code = m.receive(s);
-        cout << "TYPE " << m.header.messageType << endl;
-        wcout << "data " << m.data << endl;
+        wcout << "TYPE " << m.header.messageType << endl;
 
         switch (code) {
-        case MT_INIT: {
-
-            try {
-                int count = stoi(m.data);
-                for (int i = 0; i < count; i++) {
-                    int newSessionID = threadCounter.fetch_add(1); 
-                    Session* cSession = new Session(newSessionID);
-                    sessions.push_back(cSession);
-                    thread t(MyThread, cSession);
-                    t.detach();
-                }
-            }
-            catch (const std::exception& e) {
-                wcout << "Error creating session: " << e.what() << endl;
+        case MT_INIT: 
+        {
+            int count = stoi(m.data);
+            for (int i = 1; i <= count; i++) {
+                int newSessionID = threadCounter.fetch_add(1); 
+                Session* cSession = new Session(newSessionID);
+                sessions.push_back(cSession);
+                thread t(MyThread, cSession);
+                t.detach();
             }
             break;
         }
@@ -114,7 +107,7 @@ void processClient(tcp::socket s) {
             }
             break;
         }
-        }
+      }
     }
     catch (std::exception& e) {
         std::wcerr << "Exception: " << e.what() << endl;
