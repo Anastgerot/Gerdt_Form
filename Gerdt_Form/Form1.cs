@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 using System.Windows.Forms;
 using System.Windows.Forms.Design;
 
@@ -31,21 +32,16 @@ namespace Gerdt_Form
         //[DllImport("kernel32.dll")]
         //static extern bool AllocConsole();
 
-        [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram2\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
-        public static extern bool initconnect();
 
         [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram2\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
         public static extern void sendCommand(int commandId, string message);
 
+        [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram2\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
+        public static extern IntPtr getCountThread();
+
 
         private void Start_Click(object sender, EventArgs e)
         {
-
-            if (!ListBox.Items.Contains("Главный поток"))
-                ListBox.Items.Add("Главный поток");
-
-            if (!ListBox.Items.Contains("Все потоки"))
-                ListBox.Items.Add("Все потоки");
 
             int threadCount = (int)NumericUpDown.Value;
             if (threadCount <= 0)
@@ -59,11 +55,7 @@ namespace Gerdt_Form
 
             sendCommand(type, data);
 
-            for (int i = 1; i <= threadCount; i++)
-            {
-                totalThreads++;
-                ListBox.Items.Add($"Поток: {totalThreads}");
-            }
+            //UpdateListBox();
         }
 
         private void Stop_Click(object sender, EventArgs e)
@@ -90,9 +82,43 @@ namespace Gerdt_Form
                 }
             }
 
+            //UpdateListBox();
+
         }
+
+        private void UpdateListBox()
+        {
+            sendCommand(5, "");
+            IntPtr ptr = getCountThread();
+            if (ptr != IntPtr.Zero)
+            {
+                var cur = ListBox.SelectedIndex;
+                ListBox.Items.Clear();
+
+                ListBox.Items.Add("Главный поток");
+                ListBox.Items.Add("Все потоки");
+
+                totalThreads = 0;
+
+                string result = Marshal.PtrToStringUni(ptr);
+                var threadsArray = result.Split('|');
+
+                for (var i = 0; i < threadsArray.Length - 1; i++)
+                {
+                    totalThreads++;
+                    ListBox.Items.Add("Поток " + threadsArray[i]);
+                }
+
+                if (cur >= 0 && cur < ListBox.Items.Count)
+                    ListBox.SelectedIndex = cur;
+                else
+                    ListBox.SelectedIndex = 0;
+            }
+        }
+
         private void Send_Click(object sender, EventArgs e)
         {
+
             if (TextBox.Text.Length == 0)
             {
                 MessageBox.Show("Введите сообщение");
@@ -132,13 +158,25 @@ namespace Gerdt_Form
             }
 
             string message = TextBox.Text;
-            int messageType = 4; 
+            int messageType = 4;
 
             string fullMessage = $"{threadId}|{message}";
 
             sendCommand(messageType, fullMessage);
             MessageBox.Show("Сообщение отправлено");
 
+        }
+
+        private void OnTimeout(Object source, ElapsedEventArgs e)
+        {
+            UpdateListBox();
+        }
+        private void Form1_Load(object sender, EventArgs e)
+        {
+            var timer = new System.Timers.Timer(1000);
+            timer.Elapsed += OnTimeout;
+            timer.AutoReset = true;
+            timer.Enabled = true;
         }
     }
 }

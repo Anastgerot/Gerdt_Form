@@ -7,7 +7,8 @@ enum MessageTypes
 	MT_DATA,
 	MT_INIT,
 	MT_EXIT,
-	MT_GETDATA
+	MT_GETDATA,
+	MT_UPDATE
 };
 
 

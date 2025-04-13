@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.Send = new System.Windows.Forms.Button();
             this.Label = new System.Windows.Forms.Label();
             this.Stop = new System.Windows.Forms.Button();
@@ -36,6 +37,7 @@
             this.TextBox = new System.Windows.Forms.TextBox();
             this.Label1 = new System.Windows.Forms.Label();
             this.NumericUpDown = new System.Windows.Forms.NumericUpDown();
+            this.timer1 = new System.Windows.Forms.Timer(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.NumericUpDown)).BeginInit();
             this.SuspendLayout();
             // 
@@ -137,6 +139,7 @@
             this.Controls.Add(this.ListBox);
             this.Name = "Form1";
             this.Text = "Form1";
+            this.Load += new System.EventHandler(this.Form1_Load);
             ((System.ComponentModel.ISupportInitialize)(this.NumericUpDown)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -153,6 +156,7 @@
         private System.Windows.Forms.TextBox TextBox;
         private System.Windows.Forms.Label Label1;
         private System.Windows.Forms.NumericUpDown NumericUpDown;
+        private System.Windows.Forms.Timer timer1;
     }
 }
 

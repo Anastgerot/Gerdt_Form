@@ -13,6 +13,8 @@ using boost::asio::ip::tcp;
 vector<Session*> sessions;
 mutex mtx;
 atomic<int> threadCounter(1); 
+std::vector<tcp::socket*> clients;
+
 
 struct header {
     int id;
@@ -87,6 +89,7 @@ void processClient(tcp::socket s) {
         switch (code) {
         case MT_INIT: 
         {
+            clients.push_back(&s);
             int count = stoi(m.data);
             for (int i = 1; i <= count; i++) {
                 int newSessionID = threadCounter.fetch_add(1); 
@@ -95,6 +98,8 @@ void processClient(tcp::socket s) {
                 thread t(MyThread, cSession);
                 t.detach();
             }
+           
+            
             break;
         }
 
@@ -138,6 +143,19 @@ void processClient(tcp::socket s) {
                 }
             }
             break;
+        };
+        case MT_UPDATE: {
+            std::wstring response;
+            for (auto s : sessions) {
+                response += std::to_wstring(s->sessionID) + L"|";
+            }
+
+            response += L'\0'; 
+            int dataSize = static_cast<int>(response.size() * sizeof(wchar_t)); 
+
+            sendData(s, &dataSize, sizeof(dataSize));
+            sendData(s, response.c_str(), dataSize);
+            break;
         }
       }
     }
@@ -160,7 +178,7 @@ int main() {
         wcout << L"Сервер запущен..." << endl;
 
         launchClient(L"C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram2/Debug/Gerdt_Form.exe");
-        //launchClient(L"C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram2/Debug/Gerdt_Form.exe");
+        launchClient(L"C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram2/Debug/Gerdt_Form.exe");
 
         while (true) {
 
