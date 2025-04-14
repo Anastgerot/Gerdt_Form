@@ -22,6 +22,7 @@ namespace Gerdt_Form
     }
     public partial class Form1 : Form
     {
+        private System.Timers.Timer timer;
         private int totalThreads = 0;
         private Process process;
         public Form1()
@@ -50,6 +51,8 @@ namespace Gerdt_Form
             int type = 2;
 
             sendCommand(type, data);
+
+            timer.Enabled = true;
 
         }
 
@@ -175,10 +178,10 @@ namespace Gerdt_Form
         }
         private void Form1_Load(object sender, EventArgs e)
         {
-            var timer = new System.Timers.Timer(2000);
+            timer = new System.Timers.Timer(2000);
             timer.Elapsed += OnTimeout;
             timer.AutoReset = true;
-            timer.Enabled = true;
+            timer.Enabled = false; 
         }
     }
 }
