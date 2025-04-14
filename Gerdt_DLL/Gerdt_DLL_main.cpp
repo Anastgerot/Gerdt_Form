@@ -52,9 +52,6 @@ extern "C" {
 
             result = new wchar_t[(dataSize / sizeof(wchar_t))]();
             receiveData(socket, result, dataSize);
-
-            std::wstring receivedStr(result);
-            std::wcout << L"[DLL] Получено: " << receivedStr << std::endl;
         }
     }
 

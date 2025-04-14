@@ -13,7 +13,7 @@ using boost::asio::ip::tcp;
 vector<Session*> sessions;
 mutex mtx;
 atomic<int> threadCounter(1); 
-std::vector<tcp::socket*> clients;
+vector<tcp::socket*> clients;
 
 
 struct header {
@@ -70,7 +70,6 @@ void MyThread(Session* ses) {
                     DWORD bytesWritten;
                     WriteFile(hFile, &bom, sizeof(WCHAR), &bytesWritten, NULL);
 
-                    // Запись данных
                     WriteFile(hFile, m.data.c_str(), static_cast<DWORD>(m.data.length() * sizeof(wchar_t)), &bytesWritten, NULL);
                     CloseHandle(hFile);
                 }
@@ -149,10 +148,9 @@ void processClient(tcp::socket s) {
             for (auto s : sessions) {
                 response += std::to_wstring(s->sessionID) + L"|";
             }
-
             response += L'\0'; 
-            int dataSize = static_cast<int>(response.size() * sizeof(wchar_t)); 
 
+            int dataSize = static_cast<int>(response.size() * sizeof(wchar_t)); 
             sendData(s, &dataSize, sizeof(dataSize));
             sendData(s, response.c_str(), dataSize);
             break;

@@ -33,6 +33,7 @@ namespace Gerdt_Form
         //static extern bool AllocConsole();
 
 
+
         [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram2\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
         public static extern void sendCommand(int commandId, string message);
 
@@ -44,18 +45,12 @@ namespace Gerdt_Form
         {
 
             int threadCount = (int)NumericUpDown.Value;
-            if (threadCount <= 0)
-            {
-                MessageBox.Show("Укажите верное число потоков");
-                return;
-            }
 
             string data = threadCount.ToString();
             int type = 2;
 
             sendCommand(type, data);
 
-            //UpdateListBox();
         }
 
         private void Stop_Click(object sender, EventArgs e)
@@ -82,7 +77,6 @@ namespace Gerdt_Form
                 }
             }
 
-            //UpdateListBox();
 
         }
 
@@ -92,7 +86,10 @@ namespace Gerdt_Form
             IntPtr ptr = getCountThread();
             if (ptr != IntPtr.Zero)
             {
-                var cur = ListBox.SelectedIndex;
+                int selectedIndex = ListBox.SelectedIndex;
+                int topIndex = ListBox.TopIndex;
+
+                ListBox.BeginUpdate();
                 ListBox.Items.Clear();
 
                 ListBox.Items.Add("Главный поток");
@@ -109,10 +106,15 @@ namespace Gerdt_Form
                     ListBox.Items.Add("Поток " + threadsArray[i]);
                 }
 
-                if (cur >= 0 && cur < ListBox.Items.Count)
-                    ListBox.SelectedIndex = cur;
+                if (selectedIndex >= 0 && selectedIndex < ListBox.Items.Count)
+                    ListBox.SelectedIndex = selectedIndex;
                 else
                     ListBox.SelectedIndex = 0;
+
+                if (topIndex < ListBox.Items.Count)
+                    ListBox.TopIndex = topIndex;
+
+                ListBox.EndUpdate(); 
             }
         }
 
@@ -173,7 +175,7 @@ namespace Gerdt_Form
         }
         private void Form1_Load(object sender, EventArgs e)
         {
-            var timer = new System.Timers.Timer(1000);
+            var timer = new System.Timers.Timer(2000);
             timer.Elapsed += OnTimeout;
             timer.AutoReset = true;
             timer.Enabled = true;
