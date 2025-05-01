@@ -5,7 +5,7 @@
 #include <string>
 #include <mutex>
 #include "asio.h"
-#include "C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram2/Gerdt_lr2/Message.h"
+#include "C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram3/Gerdt_lr2/Message.h"
 #include <thread>
 
 using namespace std;

@@ -35,10 +35,10 @@ namespace Gerdt_Form
 
 
 
-        [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram2\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
+        [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram3\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
         public static extern void sendCommand(int commandId, string message);
 
-        [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram2\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
+        [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram3\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr getCountThread();
 
 
@@ -178,7 +178,7 @@ namespace Gerdt_Form
         }
         private void Form1_Load(object sender, EventArgs e)
         {
-            timer = new System.Timers.Timer(2000);
+            timer = new System.Timers.Timer(1000);
             timer.Elapsed += OnTimeout;
             timer.AutoReset = true;
             timer.Enabled = false; 

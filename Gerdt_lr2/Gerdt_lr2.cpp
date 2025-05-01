@@ -175,8 +175,8 @@ int main() {
 
         wcout << L"Сервер запущен..." << endl;
 
-        launchClient(L"C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram2/Debug/Gerdt_Form.exe");
-        launchClient(L"C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram2/Debug/Gerdt_Form.exe");
+        launchClient(L"C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram3/Debug/Gerdt_Form.exe");
+        launchClient(L"C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram3/Debug/Gerdt_Form.exe");
 
         while (true) {
 
