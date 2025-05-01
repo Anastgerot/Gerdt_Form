@@ -14,11 +14,10 @@ using boost::asio::ip::tcp;
 boost::asio::io_context io;
 unique_ptr<tcp::socket> g_socket;
 mutex g_socketMutex;
-int countThread = 0;
 wchar_t* result = nullptr;
 
 extern "C" {
-    _declspec(dllexport) wchar_t* __stdcall getCountThread() {
+    _declspec(dllexport) wchar_t* __stdcall getCountClients() {
         return result;
     }
 
@@ -31,7 +30,7 @@ extern "C" {
 
         boost::asio::connect(socket, endpoints);
         MessageHeader header;
-        header.messageType = commandId;
+        header.type = commandId;
         header.size = message ? static_cast<int>(wcslen(message) * sizeof(wchar_t)) : 0;
 
 
@@ -41,7 +40,7 @@ extern "C" {
             
 
 
-        if (header.messageType == MT_UPDATE) {
+        if (header.type == MT_UPDATE) {
             int dataSize;
             receiveData(socket, &dataSize);
 

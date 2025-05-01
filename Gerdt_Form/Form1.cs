@@ -23,7 +23,7 @@ namespace Gerdt_Form
     public partial class Form1 : Form
     {
         private System.Timers.Timer timer;
-        private int totalThreads = 0;
+        private int clientID = 0;
         private Process process;
         public Form1()
         {
@@ -39,54 +39,14 @@ namespace Gerdt_Form
         public static extern void sendCommand(int commandId, string message);
 
         [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram3\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
-        public static extern IntPtr getCountThread();
+        public static extern IntPtr getCountClients();
 
 
-        private void Start_Click(object sender, EventArgs e)
-        {
-
-            int threadCount = (int)NumericUpDown.Value;
-
-            string data = threadCount.ToString();
-            int type = 2;
-
-            sendCommand(type, data);
-
-            timer.Enabled = true;
-
-        }
-
-        private void Stop_Click(object sender, EventArgs e)
-        {
-
-            if (totalThreads == 0)
-            {
-                MessageBox.Show("Нет потоков для закрытия");
-                return;
-            }
-
-            int messageType = 3;
-            string messageData = "";
-            sendCommand(messageType, messageData);
-
-            for (int i = ListBox.Items.Count - 1; i >= 0; i--)
-            {
-                string item = ListBox.Items[i].ToString();
-                if (item.StartsWith("Поток:"))
-                {
-                    ListBox.Items.RemoveAt(i);
-                    totalThreads--;
-                    break;
-                }
-            }
-
-
-        }
 
         private void UpdateListBox()
         {
-            sendCommand(5, "");
-            IntPtr ptr = getCountThread();
+            sendCommand(4, "");
+            IntPtr ptr = getCountClients();
             if (ptr != IntPtr.Zero)
             {
                 int selectedIndex = ListBox.SelectedIndex;
@@ -95,18 +55,16 @@ namespace Gerdt_Form
                 ListBox.BeginUpdate();
                 ListBox.Items.Clear();
 
-                ListBox.Items.Add("Главный поток");
-                ListBox.Items.Add("Все потоки");
+                ListBox.Items.Add("Все клиенты");
 
-                totalThreads = 0;
-
+                clientID = 0;
                 string result = Marshal.PtrToStringUni(ptr);
-                var threadsArray = result.Split('|');
+                var clientsArray = result.Split('|');
 
-                for (var i = 0; i < threadsArray.Length - 1; i++)
+                for (var i = 0; i < clientsArray.Length - 1; i++)
                 {
-                    totalThreads++;
-                    ListBox.Items.Add("Поток " + threadsArray[i]);
+                    clientID++;
+                    ListBox.Items.Add("Клиент №" + clientsArray[i]);
                 }
 
                 if (selectedIndex >= 0 && selectedIndex < ListBox.Items.Count)
@@ -132,44 +90,32 @@ namespace Gerdt_Form
 
             if (ListBox.SelectedItem == null)
             {
-                MessageBox.Show("Выберите поток");
+                MessageBox.Show("Выберите клиента");
                 return;
             }
 
-            if (ListBox.Items.Count == 2)
+            if (ListBox.Items.Count <= 1)
             {
-                MessageBox.Show("Нет доступных потоков для отправки сообщений");
+                MessageBox.Show("Нет доступных клиентов для отправки сообщений");
                 return;
             }
 
             string selectedThread = ListBox.SelectedItem.ToString();
             int threadId = 0;
 
-            if (selectedThread == "Главный поток")
+            if (selectedThread != "Все клиенты")
             {
-                threadId = -1;
-            }
-            else if (selectedThread == "Все потоки")
-            {
-                threadId = 0;
-            }
-            else
-            {
-                if (!int.TryParse(new string(selectedThread.Where(char.IsDigit).ToArray()), out threadId))
+                string idStr = selectedThread.Replace("Клиент №", "").Trim();
+                if (!int.TryParse(idStr, out threadId))
                 {
-                    MessageBox.Show("Ошибка: Некорректный выбор потока");
+                    MessageBox.Show("Не удалось определить ID клиента");
                     return;
                 }
             }
 
-            string message = TextBox.Text;
-            int messageType = 4;
-
-            string fullMessage = $"{threadId}|{message}";
-
-            sendCommand(messageType, fullMessage);
-            MessageBox.Show("Сообщение отправлено");
-
+            string message = $"{threadId}|{TextBox.Text}";
+            sendCommand(2, message); 
+            TextBox.Clear();
         }
 
         private void OnTimeout(Object source, ElapsedEventArgs e)
@@ -178,10 +124,14 @@ namespace Gerdt_Form
         }
         private void Form1_Load(object sender, EventArgs e)
         {
+            sendCommand(0, "");
+            Thread.Sleep(200);
+            UpdateListBox();
+
             timer = new System.Timers.Timer(1000);
             timer.Elapsed += OnTimeout;
             timer.AutoReset = true;
-            timer.Enabled = false; 
+            timer.Enabled = true;
         }
     }
 }

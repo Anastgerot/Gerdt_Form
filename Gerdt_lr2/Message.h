@@ -3,31 +3,46 @@
 
 enum MessageTypes
 {
-	MT_CLOSE,
-	MT_DATA,
 	MT_INIT,
 	MT_EXIT,
 	MT_GETDATA,
-	MT_UPDATE
+	MT_DATA,
+	MT_UPDATE,
+	MT_NODATA,
+	MT_CONFIRM
+
+};
+
+enum MessageRecipients
+{
+	MR_BROKER = 10,
+	MR_ALL = 50,
+	MR_USER = 0
 };
 
 
 struct MessageHeader
 {
-	int messageType;
+	int to;
+	int from;
+	int type;
 	int size;
+
 };
 
 struct Message
 {
 	MessageHeader header = { 0 };
 	wstring data;
-	Message() = default;
-	Message(MessageTypes messageType, const wstring& data = L"")
-		:data(data)
+	static int clientID;
+
+	Message() {}
+	Message(int to, int from, int type = MT_DATA, const wstring& data = L"")
 	{
-		header = { messageType,  int(data.length() * sizeof(wchar_t)) };
+		this->data = data;
+		header = { to, from, type, int(data.length() * sizeof(wchar_t)) };
 	}
+
 
 	void send(tcp::socket& s)
 		{
@@ -46,7 +61,10 @@ struct Message
 			data.resize(header.size / sizeof(wchar_t));
 			receiveData(s, &data[0], header.size);
 		}
-		return header.messageType;
+		return header.type;
 	}
+	static void send(tcp::socket& s, int to, int from, int type = MT_DATA, const wstring& data = L"");
+	static Message send(int to, int type = MT_DATA, const wstring& data = L"");
+
 };
 

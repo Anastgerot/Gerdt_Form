@@ -2,37 +2,37 @@
 #include "C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram3/Gerdt_DLL/asio.h"
 #include "Message.h"
 
+
 class Session
 {
-private:
-	queue<Message> messages = {};
 public:
+	int id;
+	wstring name;
+	queue<Message> messages;
 
-	int sessionID;
-	Session(int sessionID):sessionID(sessionID)
+	mutex mx;
+	Session(int id, wstring name)
+		:id(id), name(name)
 	{
 	}
 
-	void addMessage(Message& m)
+	void add(Message& m)
 	{
+		lock_guard<mutex> lg(mx);
 		messages.push(m);
 	}
 
-	bool getMessages(Message& m)
+	void send(tcp::socket& s)
 	{
-		bool res = false;
-		if (!messages.empty())
+		lock_guard<mutex> lg(mx);
+		if (messages.empty())
 		{
-			res = true;
-			m = messages.front();
+			Message::send(s, id, MR_BROKER, MT_NODATA);
+		}
+		else
+		{
+			messages.front().send(s);
 			messages.pop();
 		}
-		return res;
-	}
-
-	void addMessage(MessageTypes messageType, const wstring& data = L"")
-	{
-		Message m(messageType, data);
-		addMessage(m);
 	}
 };
