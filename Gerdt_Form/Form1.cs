@@ -15,39 +15,50 @@ using System.Windows.Forms.Design;
 
 namespace Gerdt_Form
 {
-    public struct Message
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MessageHeader
     {
-        public int id;
+        public int to;
+        public int from;
+        public int type;
         public int size;
     }
     public partial class Form1 : Form
     {
         private System.Timers.Timer timer;
-        private int clientID = 0;
         private Process process;
+        private int clientID = 0;
         public Form1()
         {
             InitializeComponent();
             //AllocConsole();
+
+            string[] args = Environment.GetCommandLineArgs();
+            if (args.Length > 1 && int.TryParse(args[1], out int id))
+            {
+                clientID = id;
+                this.Text = $"Клиент №{clientID}"; 
+            }
         }
         //[DllImport("kernel32.dll")]
         //static extern bool AllocConsole();
 
 
+        [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram3\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
+        public static extern void sendCommand(int commandId, string message); 
+
 
         [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram3\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
-        public static extern void sendCommand(int commandId, string message);
+        public static extern IntPtr getMessages();
 
         [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram3\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
-        public static extern IntPtr getCountClients();
-
+        public static extern IntPtr UpdateState(int type = 0);
 
 
         private void UpdateListBox()
         {
-            sendCommand(4, "");
-            IntPtr ptr = getCountClients();
-            if (ptr != IntPtr.Zero)
+            IntPtr result = UpdateState();
+            if (result != IntPtr.Zero)
             {
                 int selectedIndex = ListBox.SelectedIndex;
                 int topIndex = ListBox.TopIndex;
@@ -57,13 +68,11 @@ namespace Gerdt_Form
 
                 ListBox.Items.Add("Все клиенты");
 
-                clientID = 0;
-                string result = Marshal.PtrToStringUni(ptr);
-                var clientsArray = result.Split('|');
+                string resultText = Marshal.PtrToStringUni(result);
+                var clientsArray = resultText.Split('|');
 
                 for (var i = 0; i < clientsArray.Length - 1; i++)
                 {
-                    clientID++;
                     ListBox.Items.Add("Клиент №" + clientsArray[i]);
                 }
 
@@ -75,7 +84,44 @@ namespace Gerdt_Form
                 if (topIndex < ListBox.Items.Count)
                     ListBox.TopIndex = topIndex;
 
-                ListBox.EndUpdate(); 
+                ListBox.EndUpdate();
+            }
+        }
+        private void UpdateMessagesListBox()
+        {
+            messagesListBox.Items.Clear();
+            IntPtr result = UpdateState(1);
+            if (result != IntPtr.Zero)
+            {
+                string resultText = Marshal.PtrToStringUni(result);
+                var clientsArray = resultText.Split('|');
+
+                // Если список клиентов пуст, ничего не показываем
+                if (clientsArray.Length == 0 || clientsArray[0] == "none")
+                {
+                    return;
+                }
+
+                bool showAllMessages = clientID != 0;
+                foreach (var clientData in clientsArray)
+                {
+                    var splited = clientData.Split(']');
+                    if (splited.Length > 1)
+                    {
+                        string clientIdStr = splited[0].TrimStart('[');
+                        string messageText = splited[1].Trim();
+
+                        int messageClientId;
+                        if (int.TryParse(clientIdStr, out messageClientId))
+                        {
+                            // Если clientID не 0, показываем все сообщения
+                            if (showAllMessages || messageClientId == clientID)
+                            {
+                                messagesListBox.Items.Add($"{messageText}");
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -101,37 +147,43 @@ namespace Gerdt_Form
             }
 
             string selectedThread = ListBox.SelectedItem.ToString();
-            int threadId = 0;
+            int clientdId = 0;
 
             if (selectedThread != "Все клиенты")
             {
                 string idStr = selectedThread.Replace("Клиент №", "").Trim();
-                if (!int.TryParse(idStr, out threadId))
+                if (!int.TryParse(idStr, out clientdId))
                 {
                     MessageBox.Show("Не удалось определить ID клиента");
                     return;
                 }
             }
 
-            string message = $"{threadId}|{TextBox.Text}";
-            sendCommand(2, message); 
+            string message = $"{clientdId}|{TextBox.Text}";
+
+            sendCommand(2, message);
             TextBox.Clear();
         }
 
         private void OnTimeout(Object source, ElapsedEventArgs e)
         {
             UpdateListBox();
+            UpdateMessagesListBox();
         }
+
+
         private void Form1_Load(object sender, EventArgs e)
         {
-            sendCommand(0, "");
-            Thread.Sleep(200);
+            sendCommand(0, clientID.ToString());
+            Thread.Sleep(500);
             UpdateListBox();
 
             timer = new System.Timers.Timer(1000);
             timer.Elapsed += OnTimeout;
             timer.AutoReset = true;
             timer.Enabled = true;
+
+
         }
     }
 }

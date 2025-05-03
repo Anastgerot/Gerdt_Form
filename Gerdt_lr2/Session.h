@@ -5,15 +5,20 @@
 
 class Session
 {
+private:
+	queue<Message> messages = {};
 public:
 	int id;
 	wstring name;
-	queue<Message> messages;
 
 	mutex mx;
 	Session(int id, wstring name)
 		:id(id), name(name)
 	{
+	}
+
+	queue<Message> getMessages() {
+		return this->messages;
 	}
 
 	void add(Message& m)

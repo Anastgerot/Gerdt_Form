@@ -13,14 +13,12 @@ using boost::asio::ip::tcp;
 int maxID = MR_USER;
 map<int, shared_ptr<Session>> sessions;
 
-
-void launchClient(wstring path)
+void launchClient(wstring path, int id)
 {
-    wstring pathCopy = path;
-
+    wstring pathCopy = path + L" " + to_wstring(id); 
     STARTUPINFO si = { sizeof(si) };
     PROCESS_INFORMATION pi;
-    if (CreateProcess(NULL, &pathCopy[0],NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi))
+    if (CreateProcess(NULL, &pathCopy[0], NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi))
     {
         CloseHandle(pi.hThread);
         CloseHandle(pi.hProcess);
@@ -30,7 +28,6 @@ void launchClient(wstring path)
         wcerr << L"Не удалось запустить клиент: " << path << endl;
     }
 }
-
 void broadcastUpdate() {
     wstring response;
     for (auto& pair : sessions) {
@@ -38,12 +35,10 @@ void broadcastUpdate() {
     }
     response += L'\0'; 
 
-    wcout << L"Обновление клиентов: " << response << endl;
 
     int dataSize = static_cast<int>(response.size() * sizeof(wchar_t));
     for (auto& pair : sessions) {
         Message updateMsg(MR_BROKER, pair.first, MT_UPDATE, response);
-        pair.second->add(updateMsg);
     }
 }
 
@@ -53,7 +48,7 @@ void processClient(tcp::socket s)
     {
         Message m;
         int code = m.receive(s);
-        cout << m.header.to << ": " << m.header.from << ": " << m.header.type << ": " << code << endl;
+        //cout << m.header.to << ": " << m.header.from << ": " << m.header.type << ": " << code << endl;
         switch (code)
         {
         case MT_INIT:
@@ -82,15 +77,17 @@ void processClient(tcp::socket s)
                     if (id == 0) {
                         wcout << L"Сообщение всем клиентам: " << text << endl;
                         for (auto& pair : sessions) {
+                            wcout << text << endl;
                             Message message(m.header.to, m.header.from, MT_DATA, text);
                             pair.second->add(message);
                         }
                     }
                     else if (id > 0 && id <= sessions.size()) {
-                        auto iSession = sessions.find(m.header.from);
-                        if (iSession != sessions.end())
-                        {
-                            iSession->second->send(s);
+                        auto it = sessions.find(id);
+                        if (it != sessions.end()) {
+                            wcout << L"Сообщение Клиенту №" << id << L": " << text << endl;
+                            Message message(id, m.header.from, MT_DATA, text);
+                            it->second->add(message);
                         }
 
                     }
@@ -98,12 +95,40 @@ void processClient(tcp::socket s)
                 break;
             }
         }
+
         case MT_UPDATE: {
             wstring response;
             for (auto& s : sessions) {
                 response += to_wstring(s.second->id) + L"|";
             }
             response += L'\0';
+
+            int dataSize = static_cast<int>(response.size() * sizeof(wchar_t));
+            sendData(s, &dataSize, sizeof(dataSize));
+            sendData(s, response.c_str(), dataSize);
+
+            break;
+        }
+        case MT_UPDATE_MESSAGES:
+        {
+            wstring response;
+
+            for (const auto& pair : sessions) {
+                auto session = pair.second;
+                auto messages = session->getMessages();
+
+                if (!messages.empty()) {
+                    while (!messages.empty()) {
+                        auto message = messages.front();
+                        response += to_wstring(message.header.to) + L"]" + message.data + L"|";
+                        messages.pop();
+                    }
+                }
+            }
+
+            if (response.empty()) {
+                response = L"none|";
+            }
 
             int dataSize = static_cast<int>(response.size() * sizeof(wchar_t));
             sendData(s, &dataSize, sizeof(dataSize));
@@ -155,8 +180,8 @@ int main() {
 
         wcout << L"Сервер запущен..." << endl;
 
-        launchClient(L"C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram3/Debug/Gerdt_Form.exe");
-        launchClient(L"C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram3/Debug/Gerdt_Form.exe");
+        launchClient(L"C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram3/Debug/Gerdt_Form.exe", 1);
+        launchClient(L"C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram3/Debug/Gerdt_Form.exe", 2);
 
 
         while (true) {
