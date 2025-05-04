@@ -1,17 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Diagnostics;
-using System.Drawing;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using System.Timers;
 using System.Windows.Forms;
-using System.Windows.Forms.Design;
 
 namespace Gerdt_Form
 {
@@ -23,11 +15,13 @@ namespace Gerdt_Form
         public int type;
         public int size;
     }
+
     public partial class Form1 : Form
     {
         private System.Timers.Timer timer;
-        private Process process;
         private int clientID = 0;
+        private DateTime lastActivityTime = DateTime.Now;
+
         public Form1()
         {
             InitializeComponent();
@@ -37,16 +31,15 @@ namespace Gerdt_Form
             if (args.Length > 1 && int.TryParse(args[1], out int id))
             {
                 clientID = id;
-                this.Text = $"Клиент №{clientID}"; 
+                this.Text = $"Клиент №{clientID}";
             }
         }
+
         //[DllImport("kernel32.dll")]
         //static extern bool AllocConsole();
 
-
         [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram3\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
-        public static extern void sendCommand(int commandId, string message); 
-
+        public static extern void sendCommand(int commandId, string message);
 
         [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram3\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr getMessages();
@@ -54,6 +47,10 @@ namespace Gerdt_Form
         [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram3\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr UpdateState(int type = 0);
 
+        private void RegisterActivity()
+        {
+            lastActivityTime = DateTime.Now;
+        }
 
         private void UpdateListBox()
         {
@@ -65,13 +62,12 @@ namespace Gerdt_Form
 
                 ListBox.BeginUpdate();
                 ListBox.Items.Clear();
-
                 ListBox.Items.Add("Все клиенты");
 
                 string resultText = Marshal.PtrToStringUni(result);
                 var clientsArray = resultText.Split('|');
 
-                for (var i = 0; i < clientsArray.Length - 1; i++)
+                for (int i = 0; i < clientsArray.Length - 1; i++)
                 {
                     ListBox.Items.Add("Клиент №" + clientsArray[i]);
                 }
@@ -87,6 +83,7 @@ namespace Gerdt_Form
                 ListBox.EndUpdate();
             }
         }
+
         private void UpdateMessagesListBox()
         {
             messagesListBox.Items.Clear();
@@ -96,13 +93,9 @@ namespace Gerdt_Form
                 string resultText = Marshal.PtrToStringUni(result);
                 var clientsArray = resultText.Split('|');
 
-                // Если список клиентов пуст, ничего не показываем
                 if (clientsArray.Length == 0 || clientsArray[0] == "none")
-                {
                     return;
-                }
 
-                bool showAllMessages = clientID != 0;
                 foreach (var clientData in clientsArray)
                 {
                     var splited = clientData.Split(']');
@@ -111,11 +104,9 @@ namespace Gerdt_Form
                         string clientIdStr = splited[0].TrimStart('[');
                         string messageText = splited[1].Trim();
 
-                        int messageClientId;
-                        if (int.TryParse(clientIdStr, out messageClientId))
+                        if (int.TryParse(clientIdStr, out int messageClientId))
                         {
-                            // Если clientID не 0, показываем все сообщения
-                            if (showAllMessages || messageClientId == clientID)
+                            if (messageClientId == 0 || messageClientId == clientID)
                             {
                                 messagesListBox.Items.Add($"{messageText}");
                             }
@@ -127,6 +118,7 @@ namespace Gerdt_Form
 
         private void Send_Click(object sender, EventArgs e)
         {
+            RegisterActivity();
 
             if (TextBox.Text.Length == 0)
             {
@@ -160,17 +152,29 @@ namespace Gerdt_Form
             }
 
             string message = $"{clientdId}|{TextBox.Text}";
-
             sendCommand(2, message);
             TextBox.Clear();
         }
 
-        private void OnTimeout(Object source, ElapsedEventArgs e)
+        private void OnTimeout(object source, ElapsedEventArgs e)
         {
-            UpdateListBox();
-            UpdateMessagesListBox();
-        }
+            if ((DateTime.Now - lastActivityTime).TotalSeconds >= 10)
+            {
+                this.Invoke((MethodInvoker)delegate
+                {
+                    timer.Stop();
+                    MessageBox.Show("Клиент был неактивен более 10 секунд. Окно будет закрыто.");
+                    this.Close();
+                });
+                return;
+            }
 
+            this.Invoke((MethodInvoker)delegate
+            {
+                UpdateListBox();
+                UpdateMessagesListBox();
+            });
+        }
 
         private void Form1_Load(object sender, EventArgs e)
         {
@@ -178,12 +182,16 @@ namespace Gerdt_Form
             Thread.Sleep(500);
             UpdateListBox();
 
+            // Отслеживание активности
+            this.MouseMove += (_, __) => RegisterActivity();
+            this.MouseClick += (_, __) => RegisterActivity();
+            this.KeyDown += (_, __) => RegisterActivity();
+            TextBox.TextChanged += (_, __) => RegisterActivity();
+
             timer = new System.Timers.Timer(1000);
             timer.Elapsed += OnTimeout;
             timer.AutoReset = true;
             timer.Enabled = true;
-
-
         }
     }
 }

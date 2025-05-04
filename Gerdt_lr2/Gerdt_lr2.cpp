@@ -15,7 +15,7 @@ map<int, shared_ptr<Session>> sessions;
 
 void launchClient(wstring path, int id)
 {
-    wstring pathCopy = path + L" " + to_wstring(id); 
+    wstring pathCopy = path + L" " + to_wstring(id);
     STARTUPINFO si = { sizeof(si) };
     PROCESS_INFORMATION pi;
     if (CreateProcess(NULL, &pathCopy[0], NULL, NULL, TRUE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi))
@@ -33,7 +33,8 @@ void broadcastUpdate() {
     for (auto& pair : sessions) {
         response += to_wstring(pair.second->id) + L"|";
     }
-    response += L'\0'; 
+    response += L'\0';
+    wcout << response << endl;
 
 
     int dataSize = static_cast<int>(response.size() * sizeof(wchar_t));
@@ -73,12 +74,12 @@ void processClient(tcp::socket s)
                 if (sepPos != wstring::npos) {
                     int id = stoi(m.data.substr(0, sepPos));
                     wstring text = m.data.substr(sepPos + 1);
-         
+
                     if (id == 0) {
                         wcout << L"Сообщение всем клиентам: " << text << endl;
                         for (auto& pair : sessions) {
                             wcout << text << endl;
-                            Message message(m.header.to, m.header.from, MT_DATA, text);
+                            Message message(id, m.header.from, MT_DATA, text);
                             pair.second->add(message);
                         }
                     }
@@ -158,7 +159,7 @@ void processClient(tcp::socket s)
             }
             break;
         }
-      }
+        }
     }
     catch (std::exception& e)
     {
