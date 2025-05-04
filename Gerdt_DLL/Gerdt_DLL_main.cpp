@@ -32,6 +32,19 @@ extern "C" {
         MessageHeader header;
         header.type = commandId;
         header.size = message ? static_cast<int>(wcslen(message) * sizeof(wchar_t)) : 0;
+        header.from = 0;
+
+        if (message && wcslen(message) > 0)
+        {
+            header.size = static_cast<int>(wcslen(message) * sizeof(wchar_t));
+
+            try {
+                header.from = std::stoi(message);
+            }
+            catch (...) {
+                header.from = 0; 
+            }
+        }
 
         sendData(socket, &header, sizeof(header));
         if (header.size > 0)

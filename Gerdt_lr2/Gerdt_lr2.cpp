@@ -34,7 +34,6 @@ void broadcastUpdate() {
         response += to_wstring(pair.second->id) + L"|";
     }
     response += L'\0';
-    wcout << response << endl;
 
 
     int dataSize = static_cast<int>(response.size() * sizeof(wchar_t));

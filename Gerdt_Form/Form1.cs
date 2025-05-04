@@ -25,18 +25,19 @@ namespace Gerdt_Form
         public Form1()
         {
             InitializeComponent();
-            //AllocConsole();
 
             string[] args = Environment.GetCommandLineArgs();
             if (args.Length > 1 && int.TryParse(args[1], out int id))
             {
                 clientID = id;
-                this.Text = $"Клиент №{clientID}";
             }
-        }
+            else
+            {
+                InitClient(); 
+            }
 
-        //[DllImport("kernel32.dll")]
-        //static extern bool AllocConsole();
+            this.Text = $"Клиент №{clientID}";
+        }
 
         [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram3\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
         public static extern void sendCommand(int commandId, string message);
@@ -46,6 +47,29 @@ namespace Gerdt_Form
 
         [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram3\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr UpdateState(int type = 0);
+
+        private void InitClient()
+        {
+            messagesListBox.Items.Clear();
+            IntPtr ptr = UpdateState(0);
+            if (ptr != IntPtr.Zero)
+            {
+                string idsStr = Marshal.PtrToStringUni(ptr);
+                var ids = idsStr.Split('|');
+
+                int max = 0;
+                foreach (var idStr in ids)
+                {
+                    if (int.TryParse(idStr, out int parsed))
+                    {
+                        if (parsed > max)
+                            max = parsed;
+                    }
+                }
+
+                clientID = ++max;
+            }
+        }
 
         private void RegisterActivity()
         {
@@ -158,13 +182,14 @@ namespace Gerdt_Form
 
         private void OnTimeout(object source, ElapsedEventArgs e)
         {
-            if ((DateTime.Now - lastActivityTime).TotalSeconds >= 10)
+            if ((DateTime.Now - lastActivityTime).TotalSeconds >= 20)
             {
                 this.Invoke((MethodInvoker)delegate
                 {
                     timer.Stop();
-                    MessageBox.Show("Клиент был неактивен более 10 секунд. Окно будет закрыто.");
+                    MessageBox.Show("Клиент был неактивен более 20 секунд. Окно будет закрыто.");
                     this.Close();
+                    sendCommand(1, clientID.ToString());
                 });
                 return;
             }
@@ -178,11 +203,10 @@ namespace Gerdt_Form
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            sendCommand(0, clientID.ToString());
+            sendCommand(0, "");
             Thread.Sleep(500);
             UpdateListBox();
 
-            // Отслеживание активности
             this.MouseMove += (_, __) => RegisterActivity();
             this.MouseClick += (_, __) => RegisterActivity();
             this.KeyDown += (_, __) => RegisterActivity();
@@ -195,3 +219,4 @@ namespace Gerdt_Form
         }
     }
 }
+
