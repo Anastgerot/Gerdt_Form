@@ -42,13 +42,14 @@ void broadcastUpdate() {
     }
 }
 
+
+
 void processClient(tcp::socket s)
 {
     try
     {
         Message m;
         int code = m.receive(s);
-        //cout << m.header.to << ": " << m.header.from << ": " << m.header.type << ": " << code << endl;
         switch (code)
         {
         case MT_INIT:
@@ -77,7 +78,6 @@ void processClient(tcp::socket s)
                     if (id == 0) {
                         wcout << L"Сообщение всем клиентам: " << text << endl;
                         for (auto& pair : sessions) {
-                            wcout << text << endl;
                             Message message(id, m.header.from, MT_DATA, text);
                             pair.second->add(message);
                         }

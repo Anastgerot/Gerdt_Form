@@ -120,6 +120,8 @@ namespace Gerdt_Form
                 if (clientsArray.Length == 0 || clientsArray[0] == "none")
                     return;
 
+                bool broadcastMessageShown = false;
+
                 foreach (var clientData in clientsArray)
                 {
                     var splited = clientData.Split(']');
@@ -130,9 +132,14 @@ namespace Gerdt_Form
 
                         if (int.TryParse(clientIdStr, out int messageClientId))
                         {
-                            if (messageClientId == 0 || messageClientId == clientID)
+                            if (messageClientId == clientID)
                             {
-                                messagesListBox.Items.Add($"{messageText}");
+                                messagesListBox.Items.Add(messageText);
+                            }
+                            else if (messageClientId == 0 && !broadcastMessageShown)
+                            {
+                                messagesListBox.Items.Add(messageText);
+                                broadcastMessageShown = true; 
                             }
                         }
                     }
@@ -182,40 +189,63 @@ namespace Gerdt_Form
 
         private void OnTimeout(object source, ElapsedEventArgs e)
         {
-            if ((DateTime.Now - lastActivityTime).TotalSeconds >= 20)
+            try
             {
+                if ((DateTime.Now - lastActivityTime).TotalSeconds >= 20)
+                {
+                    this.Invoke((MethodInvoker)delegate
+                    {
+                        timer.Stop();
+                        MessageBox.Show("Клиент был неактивен более 20 секунд. Окно будет закрыто.");
+                        try { sendCommand(1, clientID.ToString()); } catch { }
+                        this.Close();
+                    });
+                    return;
+                }
+
                 this.Invoke((MethodInvoker)delegate
                 {
-                    timer.Stop();
-                    MessageBox.Show("Клиент был неактивен более 20 секунд. Окно будет закрыто.");
-                    this.Close();
-                    sendCommand(1, clientID.ToString());
+                    try { UpdateListBox(); } catch { }
+                    try { UpdateMessagesListBox(); } catch { }
                 });
-                return;
             }
-
-            this.Invoke((MethodInvoker)delegate
-            {
-                UpdateListBox();
-                UpdateMessagesListBox();
-            });
+            catch { }
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            sendCommand(0, "");
-            Thread.Sleep(500);
-            UpdateListBox();
 
-            this.MouseMove += (_, __) => RegisterActivity();
-            this.MouseClick += (_, __) => RegisterActivity();
-            this.KeyDown += (_, __) => RegisterActivity();
-            TextBox.TextChanged += (_, __) => RegisterActivity();
+            try
+            {
+                sendCommand(0, "");
+                Thread.Sleep(500);
+                UpdateListBox();
 
-            timer = new System.Timers.Timer(1000);
-            timer.Elapsed += OnTimeout;
-            timer.AutoReset = true;
-            timer.Enabled = true;
+                this.MouseMove += (_, __) => RegisterActivity();
+                this.MouseClick += (_, __) => RegisterActivity();
+                this.KeyDown += (_, __) => RegisterActivity();
+                TextBox.TextChanged += (_, __) => RegisterActivity();
+
+                timer = new System.Timers.Timer(1000);
+                timer.Elapsed += OnTimeout;
+                timer.AutoReset = true;
+                timer.Enabled = true;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Ошибка при инициализации клиента: " + ex.Message);
+            }
+
+        }
+
+        private void Form1Closing(object sender, FormClosingEventArgs e)
+        {
+            try
+            {
+                sendCommand(1, clientID.ToString());
+                UpdateListBox();
+            }
+            catch { }
         }
     }
 }

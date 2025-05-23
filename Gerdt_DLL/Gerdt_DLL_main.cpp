@@ -17,9 +17,7 @@ unique_ptr<tcp::socket> g_socket;
 mutex g_socketMutex;
 wchar_t* result = nullptr;
 
-
 extern "C" {
-
 
     _declspec(dllexport) void __stdcall sendCommand(int commandId, const wchar_t* message)
     {
@@ -52,20 +50,18 @@ extern "C" {
     }
 
     _declspec(dllexport) wchar_t* __stdcall UpdateState(int type) {
-        // Очистка старого результата
+
         if (result) {
             delete[] result;
             result = nullptr;
         }
 
-        // Создаем сокет и подключаемся
         boost::asio::io_context io;
         tcp::socket socket(io);
         tcp::resolver resolver(io);
         auto endpoints = resolver.resolve("127.0.0.1", "12345");
         boost::asio::connect(socket, endpoints);
 
-        // Определяем команду на основе типа
         MessageHeader header;
         header.type = 0;
         header.size = 0;
@@ -76,11 +72,6 @@ extern "C" {
 
         int dataSize;
         receiveData(socket, &dataSize);
-
-        if (result) {
-            delete[] result;
-            result = nullptr;
-        }
 
         result = new wchar_t[(dataSize / sizeof(wchar_t))]();
         receiveData(socket, result, dataSize);
