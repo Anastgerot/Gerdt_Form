@@ -1,7 +1,6 @@
 #pragma once
-#include "C:/Users/anast/OneDrive/Документы/GitHub/Gerdt_SystemProgram3/Gerdt_DLL/asio.h"
 #include "Message.h"
-
+#include "asio.h"
 
 class Session
 {

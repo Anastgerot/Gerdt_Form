@@ -4,26 +4,25 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Timers;
 using System.Windows.Forms;
+using static System.Collections.Specialized.BitVector32;
 
 namespace Gerdt_Form
-{
-    [StructLayout(LayoutKind.Sequential)]
-    public struct MessageHeader
-    {
-        public int to;
-        public int from;
-        public int type;
-        public int size;
-    }
-
+{ 
     public partial class Form1 : Form
     {
+
+        [DllImport("kernel32.dll")]
+        private static extern bool AllocConsole();
+
         private System.Timers.Timer timer;
         private int clientID = 0;
+        private Session session;
         private DateTime lastActivityTime = DateTime.Now;
 
         public Form1()
         {
+            AllocConsole();
+
             InitializeComponent();
 
             string[] args = Environment.GetCommandLineArgs();
@@ -31,44 +30,8 @@ namespace Gerdt_Form
             {
                 clientID = id;
             }
-            else
-            {
-                InitClient(); 
-            }
 
             this.Text = $"Клиент №{clientID}";
-        }
-
-        [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram3\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
-        public static extern void sendCommand(int commandId, string message);
-
-        [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram3\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
-        public static extern IntPtr getMessages();
-
-        [DllImport(@"C:\Users\anast\OneDrive\Документы\GitHub\Gerdt_SystemProgram3\Gerdt_Form\x64\Debug\Gerdt_DLL.dll", CharSet = CharSet.Unicode)]
-        public static extern IntPtr UpdateState(int type = 0);
-
-        private void InitClient()
-        {
-            messagesListBox.Items.Clear();
-            IntPtr ptr = UpdateState(0);
-            if (ptr != IntPtr.Zero)
-            {
-                string idsStr = Marshal.PtrToStringUni(ptr);
-                var ids = idsStr.Split('|');
-
-                int max = 0;
-                foreach (var idStr in ids)
-                {
-                    if (int.TryParse(idStr, out int parsed))
-                    {
-                        if (parsed > max)
-                            max = parsed;
-                    }
-                }
-
-                clientID = ++max;
-            }
         }
 
         private void RegisterActivity()
@@ -78,73 +41,61 @@ namespace Gerdt_Form
 
         private void UpdateListBox()
         {
-            IntPtr result = UpdateState();
-            if (result != IntPtr.Zero)
+            ListBox.BeginUpdate();
+            ListBox.Items.Clear();
+            ListBox.Items.Add("Все клиенты");
+
+            string response = session.get(MessageTypes.MT_UPDATE);
+
+            MessageBox.Show(response);
+
+            if (!string.IsNullOrWhiteSpace(response))
             {
-                int selectedIndex = ListBox.SelectedIndex;
-                int topIndex = ListBox.TopIndex;
-
-                ListBox.BeginUpdate();
-                ListBox.Items.Clear();
-                ListBox.Items.Add("Все клиенты");
-
-                string resultText = Marshal.PtrToStringUni(result);
-                var clientsArray = resultText.Split('|');
-
-                for (int i = 0; i < clientsArray.Length - 1; i++)
+                var clients = response.Split('|');
+                foreach (var c in clients)
                 {
-                    ListBox.Items.Add("Клиент №" + clientsArray[i]);
+                    if (!string.IsNullOrWhiteSpace(c))
+                        ListBox.Items.Add("Клиент №" + c);
                 }
-
-                if (selectedIndex >= 0 && selectedIndex < ListBox.Items.Count)
-                    ListBox.SelectedIndex = selectedIndex;
-                else
-                    ListBox.SelectedIndex = 0;
-
-                if (topIndex < ListBox.Items.Count)
-                    ListBox.TopIndex = topIndex;
-
-                ListBox.EndUpdate();
             }
+
+            if (ListBox.Items.Count > 0)
+                ListBox.SelectedIndex = 0;
+
+            ListBox.EndUpdate();
+           
         }
 
         private void UpdateMessagesListBox()
         {
-            messagesListBox.Items.Clear();
-            IntPtr result = UpdateState(1);
-            if (result != IntPtr.Zero)
+            try
             {
-                string resultText = Marshal.PtrToStringUni(result);
-                var clientsArray = resultText.Split('|');
+                messagesListBox.Items.Clear();
+                string response = session.get(MessageTypes.MT_UPDATE_MESSAGES);
 
-                if (clientsArray.Length == 0 || clientsArray[0] == "none")
+                if (string.IsNullOrWhiteSpace(response) || response == "none")
                     return;
 
-                bool broadcastMessageShown = false;
-
-                foreach (var clientData in clientsArray)
+                var lines = response.Split('|');
+                foreach (var line in lines)
                 {
-                    var splited = clientData.Split(']');
-                    if (splited.Length > 1)
+                    var parts = line.Split(']');
+                    if (parts.Length == 2)
                     {
-                        string clientIdStr = splited[0].TrimStart('[');
-                        string messageText = splited[1].Trim();
+                        string clientIdStr = parts[0].TrimStart('[');
+                        string messageText = parts[1].Trim();
 
-                        if (int.TryParse(clientIdStr, out int messageClientId))
+                        if (int.TryParse(clientIdStr, out int toId))
                         {
-                            if (messageClientId == clientID)
+                            if (toId == 0 || toId == session.sessionId)
                             {
                                 messagesListBox.Items.Add(messageText);
-                            }
-                            else if (messageClientId == 0 && !broadcastMessageShown)
-                            {
-                                messagesListBox.Items.Add(messageText);
-                                broadcastMessageShown = true; 
                             }
                         }
                     }
                 }
             }
+            catch { }
         }
 
         private void Send_Click(object sender, EventArgs e)
@@ -163,89 +114,94 @@ namespace Gerdt_Form
                 return;
             }
 
-            if (ListBox.Items.Count <= 1)
+            string selected = ListBox.SelectedItem.ToString();
+            int to = 0;
+            if (selected != "Все клиенты")
             {
-                MessageBox.Show("Нет доступных клиентов для отправки сообщений");
-                return;
-            }
-
-            string selectedThread = ListBox.SelectedItem.ToString();
-            int clientdId = 0;
-
-            if (selectedThread != "Все клиенты")
-            {
-                string idStr = selectedThread.Replace("Клиент №", "").Trim();
-                if (!int.TryParse(idStr, out clientdId))
+                if (!int.TryParse(selected.Replace("Клиент №", "").Trim(), out to))
                 {
-                    MessageBox.Show("Не удалось определить ID клиента");
+                    MessageBox.Show("Неверный формат клиента");
                     return;
                 }
             }
 
-            string message = $"{clientdId}|{TextBox.Text}";
-            sendCommand(2, message);
+            var header = new MessageHeader
+            {
+                to = to,
+                type = 3,
+                size = 0
+            };
+
+            session.send(new Message(header, TextBox.Text));
             TextBox.Clear();
+
         }
 
         private void OnTimeout(object source, ElapsedEventArgs e)
         {
-            try
-            {
-                if ((DateTime.Now - lastActivityTime).TotalSeconds >= 20)
-                {
-                    this.Invoke((MethodInvoker)delegate
-                    {
-                        timer.Stop();
-                        MessageBox.Show("Клиент был неактивен более 20 секунд. Окно будет закрыто.");
-                        try { sendCommand(1, clientID.ToString()); } catch { }
-                        this.Close();
-                    });
-                    return;
-                }
+            //if ((DateTime.Now - lastActivityTime).TotalSeconds >= 20)
+            //{
+            //    this.Invoke((MethodInvoker)delegate
+            //    {
+            //        timer.Stop();
+            //        MessageBox.Show("Клиент неактивен более 20 секунд. Окно будет закрыто.");
+            //        session.disconnect();
+            //        this.Close();
+            //    });
+            //    return;
+            //}
 
-                this.Invoke((MethodInvoker)delegate
-                {
-                    try { UpdateListBox(); } catch { }
-                    try { UpdateMessagesListBox(); } catch { }
-                });
-            }
-            catch { }
+            //this.Invoke((MethodInvoker)delegate
+            //{
+            //    UpdateListBox();
+            //    UpdateMessagesListBox();
+            //});
         }
 
         private void Form1_Load(object sender, EventArgs e)
         {
 
-            try
-            {
-                sendCommand(0, "");
-                Thread.Sleep(500);
-                UpdateListBox();
+            session = new Session();
 
-                this.MouseMove += (_, __) => RegisterActivity();
-                this.MouseClick += (_, __) => RegisterActivity();
-                this.KeyDown += (_, __) => RegisterActivity();
-                TextBox.TextChanged += (_, __) => RegisterActivity();
+            this.MouseMove += (_, __) => RegisterActivity();
+            this.MouseClick += (_, __) => RegisterActivity();
+            this.KeyDown += (_, __) => RegisterActivity();
+            TextBox.TextChanged += (_, __) => RegisterActivity();
 
-                timer = new System.Timers.Timer(1000);
-                timer.Elapsed += OnTimeout;
-                timer.AutoReset = true;
-                timer.Enabled = true;
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show("Ошибка при инициализации клиента: " + ex.Message);
-            }
+            timer = new System.Timers.Timer(1000);
+            timer.Elapsed += OnTimeout;
+            timer.AutoReset = true;
+            timer.Enabled = false; 
 
         }
 
         private void Form1Closing(object sender, FormClosingEventArgs e)
         {
-            try
+            session?.disconnect();
+        }
+
+        private void Connect_Click(object sender, EventArgs e)
+        {
+            if (!session.connect())
             {
-                sendCommand(1, clientID.ToString());
-                UpdateListBox();
+                MessageBox.Show("Сервер не найден");
+                return;
             }
-            catch { }
+
+            timer.Start();
+            this.Text = "Клиент №" + session.sessionId;
+            UpdateListBox();
+            //UpdateMessagesListBox();
+
+        }
+
+        private void Disconnect_Click(object sender, EventArgs e)
+        {
+            messagesListBox.Items.Clear();
+            session.disconnect();
+            timer.Stop();
+            this.Text = "Клиент (отключён)";
+
         }
     }
 }
